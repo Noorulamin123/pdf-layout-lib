@@ -8,7 +8,8 @@ def render_block(block, data_rows):
     if block["type"] == "table":
         block["data_rows"] = data_rows
         field_map = block["field_map"]
-        table_data = build_data_table(field_map, data_rows)
+        transformed_rows = apply_transforms(field_map, data_rows)
+        table_data = build_data_table(field_map, transformed_rows)
         return build_table(table_data, block)
     elif block["type"] == "separator":
         length = block.get("length", 500)

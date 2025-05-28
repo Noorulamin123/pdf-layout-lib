@@ -2,6 +2,80 @@
   "type": "column",
   "children": [
     {
+      "type": "group",
+      "group_name": "grp1"
+    },
+    {
+      "type": "variable",
+      "label": "VARIABLE_1",
+      "key": "VAR_1",
+      "group_name": "grp1"
+    },
+    {
+      "type": "variable",
+      "label": "VARIABLE_12",
+      "key": "VAR_12",
+      "group_name": "grp1"
+    },
+    {
+      "type": "variable",
+      "label": "VARIABLE_2",
+      "key": "VAR_3|VAR_2|VAR_1",
+      "transform": "join_pipes",
+      "group_name": "grp1"
+    },
+    {
+      "type": "row",
+      "children": [
+        {
+          "type": "variable",
+          "label": "VARIABLE_5",
+          "key": "VAR_5",
+          "group_name": "grp1"
+        },
+        {
+          "type": "variable",
+          "label": "VARIABLE_6",
+          "key": "VAR_6",
+          "group_name": "grp1"
+        },
+        {
+          "type": "separator",
+          "length": 60,
+          "thickness": 2,
+          "color": "blue",
+          "direction": "vertical",
+          "margin_before": 20,
+          "margin_after": 20,
+          "dash": [
+            3,
+            2
+          ]
+        },
+        {
+          "type": "variable",
+          "label": "VARIABLE_7",
+          "key": "VAR_7",
+          "group_name": "grp1"
+        },
+        {
+          "type": "variable",
+          "label": "VARIABLE_8",
+          "key": "VAR_8",
+          "group_name": "grp1"
+        }
+      ]
+    },
+    {
+      "type": "separator",
+      "length": 400,
+      "thickness": 2,
+      "color": "blue",
+      "direction": "horizontal",
+      "margin_before": 20,
+      "margin_after": 20
+    },
+    {
       "type": "table",
       "field_map": [
         {
@@ -54,7 +128,16 @@
         }
       ],
       "style": {
-        "col_widths": [80, 60, 60, 60, 60, 80, 80, 60],
+        "col_widths": [
+          80,
+          60,
+          60,
+          60,
+          60,
+          80,
+          80,
+          60
+        ],
         "font_name": "Helvetica",
         "font_size": 9,
         "font_style": "bold-italic",
@@ -64,16 +147,6 @@
         "header_text_color": "whitesmoke",
         "body_background": "beige"
       }
-    },
-    {
-      "type": "separator",
-      "length": 0,
-      "thickness": 2,
-      "color": "blue",
-      "direction": "horizontal",
-      "margin_before": 20,
-      "margin_after": 20,
-      "dash": [3,2]
     }
   ]
 }

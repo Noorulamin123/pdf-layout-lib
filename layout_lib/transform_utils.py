@@ -11,12 +11,13 @@ TRANSFORMS = {
     "format_time_dd": lambda v: datetime.fromtimestamp(v).strftime("%H:%M %d") if v else "-",
     "dash_if_none": lambda v: "-" if v is None else v,
     "dollarize": dollarize,
-    "join_lines": lambda values: "\n".join(str(v) for v in values)
+    "join_lines": lambda values: "\n".join(str(v) for v in values),
+    "join_pipes": lambda values: " | ".join(str(v) for v in values)
 }
 
 
 def apply_transforms(field_map, data_rows):
-    from table import parse_field_map  # avoid circular import
+    from layout_lib.table import parse_field_map  # avoid circular import
     _, final_keys = parse_field_map(field_map)
     transform_map = {}
 

@@ -1,7 +1,8 @@
-from reportlab.platypus import Table, TableStyle
+from reportlab.platypus import Table, TableStyle, Paragraph
 from reportlab.lib import colors
 from reportlab.pdfbase.pdfmetrics import stringWidth
-from transform import TRANSFORMS  # Add this import
+from reportlab.lib.styles import getSampleStyleSheet
+from layout_lib.transform_utils import TRANSFORMS
 
 def parse_field_map(field_map):
     final_keys = []
@@ -18,7 +19,6 @@ def parse_field_map(field_map):
     depth = get_depth(field_map)
     header_rows = [[] for _ in range(depth)]
 
-    # Track column position globally using mutable list
     def recurse(items, row=0, col_ref=[0]):
         for item in items:
             col = col_ref[0]
@@ -26,7 +26,7 @@ def parse_field_map(field_map):
                 span = count_leaf_keys(item["children"])
                 header_rows[row] += [""] * (col - len(header_rows[row]))
                 header_rows[row].append(item["label"])
-                for i in range(1, span):
+                for _ in range(1, span):
                     header_rows[row].append("")
                 recurse(item["children"], row + 1, col_ref)
             else:
@@ -48,15 +48,7 @@ def parse_field_map(field_map):
         while len(r) < max_len:
             r.append("")
 
-    # debug_header_rows(header_rows)
-
     return header_rows, final_keys
-
-
-def debug_header_rows(header_rows):
-    print("DEBUG: Header Rows:")
-    for i, row in enumerate(header_rows):
-        print(f"Row {i}: {row}")
 
 def build_data_table(field_map, data_rows):
     header_rows, final_keys = parse_field_map(field_map)
@@ -66,28 +58,12 @@ def build_data_table(field_map, data_rows):
         for item in items:
             if item.get("group"):
                 collect_transforms(item["children"])
-            else:
-                key = item["key"]
-                if "transform" in item:
-                    transform_val = item["transform"]
-                    if isinstance(transform_val, str):
-                        # Try to get from TRANSFORMS, else eval as lambda
-                        if transform_val in TRANSFORMS:
-                            transform_map[key] = TRANSFORMS[transform_val]
-                        else:
-                            try:
-                                transform_map[key] = eval(transform_val)
-                            except Exception as e:
-                                print(f"⚠️ Invalid transform for '{key}': {e}")
-                    else:
-                        try:
-                            transform_map[key] = eval(transform_val)
-                        except Exception as e:
-                            print(f"⚠️ Invalid transform for '{key}': {e}")
 
     collect_transforms(field_map)
 
     body_rows = []
+    style = getSampleStyleSheet()["BodyText"]
+
     for row in data_rows:
         new_row = []
         for key in final_keys:
@@ -98,10 +74,14 @@ def build_data_table(field_map, data_rows):
                     value = transform(value)
                 except Exception as e:
                     print(f"⚠️ Transform error on key '{key}': {e}")
+
+            if isinstance(value, str) and "\n" in value:
+                value = Paragraph(value.replace("\n", "<br/>"), style)
+
             new_row.append(value)
         body_rows.append(new_row)
-    return header_rows + body_rows
 
+    return header_rows + body_rows
 
 def build_table(data, layout):
     max_cols = max(len(row) for row in data)
@@ -109,9 +89,39 @@ def build_table(data, layout):
         while len(row) < max_cols:
             row.append("")
 
-    font_name = 'Helvetica'
-    font_size = 10
-    col_widths = [max(stringWidth(str(row[col]), font_name, font_size) for row in data) + 10 for col in range(max_cols)]
+    style_config = layout.get("style", {})
+    font_name = style_config.get("font_name", "Helvetica")
+    font_size = style_config.get("font_size", 10)
+    body_font_size = style_config.get("body_font_size", font_size)
+    font_style = style_config.get("font_style", "").lower()
+
+    font_name_map = {
+        ("helvetica", ""): "Helvetica",
+        ("helvetica", "bold"): "Helvetica-Bold",
+        ("helvetica", "italic"): "Helvetica-Oblique",
+        ("helvetica", "bold-italic"): "Helvetica-BoldOblique",
+        ("times-roman", ""): "Times-Roman",
+        ("times-roman", "bold"): "Times-Bold",
+        ("times-roman", "italic"): "Times-Italic",
+        ("times-roman", "bold-italic"): "Times-BoldItalic",
+        ("courier", ""): "Courier",
+        ("courier", "bold"): "Courier-Bold",
+        ("courier", "italic"): "Courier-Oblique",
+        ("courier", "bold-italic"): "Courier-BoldOblique"
+    }
+    font_key = (font_name.lower(), font_style)
+    resolved_font_name = font_name_map.get(font_key, font_name)
+
+    col_widths = style_config.get("col_widths")
+    if not col_widths:
+        col_widths = []
+        for col in range(max_cols):
+            max_width = 0
+            for row in data:
+                cell = row[col]
+                text = cell.getPlainText() if hasattr(cell, 'getPlainText') else str(cell)
+                max_width = max(max_width, stringWidth(text, font_name, font_size))
+            col_widths.append(max_width + 10)
 
     table = Table(data, colWidths=col_widths)
 
@@ -119,15 +129,17 @@ def build_table(data, layout):
     max_header_row = header_rows_count - 1
 
     style = [
-        ('BACKGROUND', (0, 0), (-1, max_header_row), getattr(colors, layout["style"].get("header_background", "grey"))),
-        ('TEXTCOLOR', (0, 0), (-1, max_header_row), getattr(colors, layout["style"].get("header_text_color", "whitesmoke"))),
-        ('FONTNAME', (0, 0), (-1, max_header_row), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, 0), (-1, max_header_row), getattr(colors, style_config.get("header_background", "grey"))),
+        ('TEXTCOLOR', (0, 0), (-1, max_header_row), getattr(colors, style_config.get("header_text_color", "whitesmoke"))),
+        ('FONTNAME', (0, 0), (-1, max_header_row), resolved_font_name),
+        ('FONTSIZE', (0, 0), (-1, max_header_row), font_size),
+        ('FONTSIZE', (0, header_rows_count), (-1, -1), body_font_size),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('BOTTOMPADDING', (0, 0), (-1, max_header_row), 10),
-        ('BACKGROUND', (0, header_rows_count), (-1, -1), getattr(colors, layout["style"].get("body_background", "beige")))
+        ('BACKGROUND', (0, header_rows_count), (-1, -1), getattr(colors, style_config.get("body_background", "beige")))
     ]
 
-    if layout["style"].get("grid", True):
+    if style_config.get("grid", True):
         style.append(('GRID', (0, 0), (-1, -1), 1, colors.black))
 
     def count_leaf_keys(items):
@@ -138,18 +150,14 @@ def build_table(data, layout):
         for item in field_map:
             if item.get("group"):
                 span = count_leaf_keys(item["children"])
-                # Horizontal span across columns in this row
                 style.append(('SPAN', (col, row), (col + span - 1, row)))
-                # Recurse to next row for children
                 apply_spans(item["children"], col, row + 1, max_row)
                 col += span
             else:
-                # Vertical span from current row down to last header row
                 style.append(('SPAN', (col, row), (col, max_row)))
                 col += 1
         return col
 
     apply_spans(layout["field_map"])
-
     table.setStyle(TableStyle(style))
     return table

@@ -1,0 +1,72 @@
+[
+  {
+    "RIC": "AAPL.O",
+    "Ticker": "AAPL",
+    "Ask": 175.25,
+    "Bid": 175.20,
+    "Last": 175.22,
+    "Volume": 12500000,
+    "Exchange": "NASDAQ",
+    "Currency": "USD"
+  },
+  {
+    "RIC": "MSFT.O",
+    "Ticker": "MSFT",
+    "Ask": 420.10,
+    "Bid": 420.05,
+    "Last": 420.08,
+    "Volume": 8900000,
+    "Exchange": "NASDAQ",
+    "Currency": "USD"
+  },
+  {
+    "RIC": "GOOGL.O",
+    "Ticker": "GOOGL",
+    "Ask": 180.50,
+    "Bid": 180.45,
+    "Last": 180.48,
+    "Volume": 7200000,
+    "Exchange": "NASDAQ",
+    "Currency": "USD"
+  },
+  {
+    "RIC": "TSLA.O",
+    "Ticker": "TSLA",
+    "Ask": 185.70,
+    "Bid": 185.65,
+    "Last": 185.68,
+    "Volume": 15000000,
+    "Exchange": "NASDAQ",
+    "Currency": "USD"
+  },
+  {
+    "RIC": "AMZN.O",
+    "Ticker": "AMZN",
+    "Ask": 190.30,
+    "Bid": 190.25,
+    "Last": 190.28,
+    "Volume": 9800000,
+    "Exchange": "NASDAQ",
+    "Currency": "USD"
+  },
+  {
+    "RIC": "XAU=",
+    "Ticker": "GOLD",
+    "Ask": 2350.75,
+    "Bid": 2350.25,
+    "Last": 2350.50,
+    "Volume": 50000,
+    "Exchange": "COMEX",
+    "Currency": "USD"
+  },
+  {
+    "RIC": "EUR=",
+    "Ticker": "EURUSD",
+    "Ask": 1.0855,
+    "Bid": 1.0853,
+    "Last": 1.0854,
+    "Volume": 25000000,
+    "Exchange": "FX Spot",
+    "Currency": "USD"
+  }
+]

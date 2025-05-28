@@ -1,6 +1,7 @@
 from reportlab.platypus import Table, TableStyle
 from reportlab.lib import colors
 from reportlab.pdfbase.pdfmetrics import stringWidth
+from transform import TRANSFORMS  # Add this import
 
 def parse_field_map(field_map):
     final_keys = []
@@ -59,7 +60,48 @@ def debug_header_rows(header_rows):
 
 def build_data_table(field_map, data_rows):
     header_rows, final_keys = parse_field_map(field_map)
-    return header_rows + [[row.get(k, "") for k in final_keys] for row in data_rows]
+
+    transform_map = {}
+    def collect_transforms(items):
+        for item in items:
+            if item.get("group"):
+                collect_transforms(item["children"])
+            else:
+                key = item["key"]
+                if "transform" in item:
+                    transform_val = item["transform"]
+                    if isinstance(transform_val, str):
+                        # Try to get from TRANSFORMS, else eval as lambda
+                        if transform_val in TRANSFORMS:
+                            transform_map[key] = TRANSFORMS[transform_val]
+                        else:
+                            try:
+                                transform_map[key] = eval(transform_val)
+                            except Exception as e:
+                                print(f"⚠️ Invalid transform for '{key}': {e}")
+                    else:
+                        try:
+                            transform_map[key] = eval(transform_val)
+                        except Exception as e:
+                            print(f"⚠️ Invalid transform for '{key}': {e}")
+
+    collect_transforms(field_map)
+
+    body_rows = []
+    for row in data_rows:
+        new_row = []
+        for key in final_keys:
+            value = row.get(key, "")
+            transform = transform_map.get(key)
+            if transform:
+                try:
+                    value = transform(value)
+                except Exception as e:
+                    print(f"⚠️ Transform error on key '{key}': {e}")
+            new_row.append(value)
+        body_rows.append(new_row)
+    return header_rows + body_rows
+
 
 def build_table(data, layout):
     max_cols = max(len(row) for row in data)

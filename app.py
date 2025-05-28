@@ -3,7 +3,6 @@ from reportlab.platypus import SimpleDocTemplate
 
 from table_utils import build_table, build_data_table
 
-
 def interpret_dsl(layout, filename="output.pdf"):
     doc = SimpleDocTemplate(filename)
 

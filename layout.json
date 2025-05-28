@@ -1,45 +1,131 @@
 {
-  "field_map": [
+  "type": "column",
+  "children": [
     {
-      "label": "Financial Data",
-      "group": true,
-      "children": [
+      "type": "table",
+      "field_map": [
         {
-          "label": "Ticker Symbol",
-          "key": "Ticker"
-        },
-        {
-          "label": "RIC Code",
-          "key": "RIC"
-        },
-        {
-          "label": "Price",
+          "label": "Financial Data",
           "group": true,
           "children": [
-            { "label": "Ask Price", "key": "Ask" , "transform": "lambda x: f'${x}'"},
-            { "label": "Bid Price", "key": "Bid" , "transform": "dollarize"},
-            { "label": "Last Price", "key": "Last", "transform": "dollarize"}
+            {
+              "label": "Ticker Symbol",
+              "key": "Ticker"
+            },
+            {
+              "label": "RIC Code",
+              "key": "RIC"
+            },
+            {
+              "label": "Price",
+              "group": true,
+              "children": [
+                {
+                  "label": "Ask Price",
+                  "key": "Ask",
+                  "transform": "lambda x: f'${x}'"
+                },
+                {
+                  "label": "Bid Price",
+                  "key": "Bid",
+                  "transform": "dollarize"
+                },
+                {
+                  "label": "Last Price",
+                  "key": "Last",
+                  "transform": "dollarize"
+                }
+              ]
+            },
+            {
+              "label": "Volume Traded",
+              "key": "Volume"
+            },
+            {
+              "label": "Exchange Name",
+              "key": "Exchange"
+            },
+            {
+              "label": "Currency",
+              "key": "Currency"
+            }
           ]
-        },
-        {
-          "label": "Volume Traded",
-          "key": "Volume"
-        },
-        {
-          "label": "Exchange Name",
-          "key": "Exchange"
-        },
-        {
-          "label": "Currency",
-          "key": "Currency"
         }
-      ]
+      ],
+      "style": {
+        "grid": true,
+        "header_background": "grey",
+        "header_text_color": "whitesmoke",
+        "body_background": "beige"
+      }
+    },
+    {
+      "type": "separator",
+      "length": 0,
+      "thickness": 2,
+      "color": "blue",
+      "direction": "horizontal",
+      "margin_before": 20,
+      "margin_after": 20,
+      "dash": [3,2]
+    },
+    {
+      "type": "table",
+      "field_map": [
+        {
+          "label": "Financial Data",
+          "group": true,
+          "children": [
+            {
+              "label": "Ticker Symbol",
+              "key": "Ticker"
+            },
+            {
+              "label": "RIC Code",
+              "key": "RIC"
+            },
+            {
+              "label": "Price",
+              "group": true,
+              "children": [
+                {
+                  "label": "Ask Price",
+                  "key": "Ask",
+                  "transform": "lambda x: f'${x}'"
+                },
+                {
+                  "label": "Bid Price",
+                  "key": "Bid",
+                  "transform": "dollarize"
+                },
+                {
+                  "label": "Last Price",
+                  "key": "Last",
+                  "transform": "dollarize"
+                }
+              ]
+            },
+            {
+              "label": "Volume Traded",
+              "key": "Volume"
+            },
+            {
+              "label": "Exchange Name",
+              "key": "Exchange"
+            },
+            {
+              "label": "Currency",
+              "key": "Currency"
+            }
+          ]
+        }
+      ],
+      "style": {
+        "grid": true,
+        "header_background": "grey",
+        "header_text_color": "whitesmoke",
+        "body_background": "beige"
+      }
     }
-  ],
-  "style": {
-    "grid": true,
-    "header_background": "grey",
-    "header_text_color": "whitesmoke",
-    "body_background": "beige"
-  }
+  ]
 }

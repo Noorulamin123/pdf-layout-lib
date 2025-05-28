@@ -1,21 +1,17 @@
 import json
 from reportlab.platypus import SimpleDocTemplate
-
-from table_utils import build_table, build_data_table
+from renderer import interpret_layout
 
 def interpret_dsl(layout, filename="output.pdf"):
     doc = SimpleDocTemplate(filename)
-
-    field_map = layout["field_map"]
-    data_rows = layout["data_rows"]
-
-    table_data = build_data_table(field_map, data_rows)
-
-    # Make sure layout has data_rows key
-    layout["data_rows"] = data_rows
-
-    table = build_table(table_data, layout)
-    doc.build([table])
+    data_rows = layout.get("data_rows", [])
+    layout_tree = {
+        "type": layout.get("type", "column"),
+        "children": layout.get("children", layout.get("layout", [])),
+        "columns": layout.get("columns", 2)
+    }
+    flowables = interpret_layout(layout_tree, data_rows)
+    doc.build(flowables)
     print(f"✅ PDF generated: {filename}")
 
 if __name__ == "__main__":

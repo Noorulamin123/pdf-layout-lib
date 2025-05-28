@@ -1,22 +1,42 @@
 {
   "field_map": [
-    { "label": "Ticker Symbol", "key": "Ticker" },
-    { "label": "RIC Code", "key": "RIC" },
     {
-      "label": "Price",
+      "label": "Financial Data",
       "group": true,
       "children": [
-        { "label": "Ask Price", "key": "Ask" },
-        { "label": "Bid Price", "key": "Bid" },
-        { "label": "Last Price", "key": "Last" }
+        {
+          "label": "Ticker Symbol",
+          "key": "Ticker"
+        },
+        {
+          "label": "RIC Code",
+          "key": "RIC"
+        },
+        {
+          "label": "Price",
+          "group": true,
+          "children": [
+            { "label": "Ask Price", "key": "Ask" },
+            { "label": "Bid Price", "key": "Bid" },
+            { "label": "Last Price", "key": "Last" }
+          ]
+        },
+        {
+          "label": "Volume Traded",
+          "key": "Volume"
+        },
+        {
+          "label": "Exchange Name",
+          "key": "Exchange"
+        },
+        {
+          "label": "Currency",
+          "key": "Currency"
+        }
       ]
-    },
-    { "label": "Volume Traded", "key": "Volume" },
-    { "label": "Exchange Name", "key": "Exchange" },
-    { "label": "Currency", "key": "Currency" }
+    }
   ],
   "style": {
-    "header_rows": 2,
     "grid": true,
     "header_background": "grey",
     "header_text_color": "whitesmoke",

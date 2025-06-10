@@ -3,7 +3,8 @@
   "children": [
     {
       "type": "group",
-      "group_name": "grp1"
+      "group_name": "grp1",
+      "filter": "RIC=GOOGL.O"
     },
     {
       "type": "variable",

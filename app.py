@@ -23,7 +23,7 @@ if __name__ == "__main__":
     layout["data_rows"] = data
 
     # Load group data from JSON file
-    with open("data/group_data.json") as gf:
+    with open("data/group_data2.json") as gf:
         group_data = json.load(gf)
 
     # Inject group data into all group blocks matching group_name

@@ -4,6 +4,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from layout_lib.table import build_table, build_data_table
 from layout_lib.transform_utils import apply_transforms, TRANSFORMS
 from layout_lib.separator import Separator
+from layout_lib.filter_utils import apply_filter
 
 def render_block(block, data_rows, group_context=None):
     if block["type"] == "table":
@@ -88,14 +89,31 @@ def interpret_layout(layout, data_rows, group_context=None):
     children = layout.get("children", [])
     columns = layout.get("columns", 2)
 
-    # Collect group data if root call (optional)
     if not group_context:
         for block in children:
             if block.get("type") == "group":
                 group_name = block.get("group_name")
-                group_data = block.get("data", {})
-                if group_name:
-                    group_context[group_name] = group_data
+                raw_data = block.get("data", {})
+                filter_condition = block.get("filter")
+
+                if isinstance(raw_data, list):
+                    if not filter_condition:
+                        raise ValueError(f"Group '{group_name}' is a list but missing 'filter' field.")
+
+                    try:
+                        filtered_data = apply_filter(raw_data, filter_condition)
+                        if filtered_data:
+                            group_context[group_name] = filtered_data
+                        else:
+                            print(f"⚠️ No match found in group '{group_name}' for filter: {filter_condition}")
+                            group_context[group_name] = {}
+                    except Exception as e:
+                        print(f"⚠️ Filter error in group '{group_name}': {e}")
+                        group_context[group_name] = {}
+                elif isinstance(raw_data, dict):
+                    group_context[group_name] = raw_data
+                else:
+                    print(f"⚠️ Unsupported group data format in group '{group_name}'")
 
     if layout_type == "column":
         for block in children:
@@ -145,6 +163,7 @@ def interpret_layout(layout, data_rows, group_context=None):
         flowables.append(RLTable(grid_rows, hAlign='LEFT'))
 
     else:
-        print(f"⚠️ Unsupported layout type '{layout_type}'")
+        print(f"⚠️ Unsupported layout type '{layout_type}'. Supported types are: column, row, grid")
+        return []
 
     return flowables

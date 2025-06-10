@@ -1,0 +1,4 @@
+*.pdf
+bckp/*
+__pycache__/*
+layout_lib/__pycache__/*

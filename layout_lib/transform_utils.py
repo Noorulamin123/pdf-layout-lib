@@ -1,71 +1,106 @@
+from typing import Any, Callable, Dict, List, Union
+import json
 from datetime import datetime
 
-def dollarize(value):
-    return f"${value}"
+def dollarize(value: Union[str, float, int]) -> str:
+    """Format number as dollar amount."""
+    try:
+        return f"${float(value):,.2f}"
+    except (ValueError, TypeError):
+        return str(value)
 
+def volume_millions(value: Union[str, float, int]) -> str:
+    """Format volume in millions."""
+    try:
+        return f"{float(value)/1000000:.2f}M"
+    except (ValueError, TypeError):
+        return str(value)
 
-# Define the transforms once at module level
-TRANSFORMS = {
-    "price": lambda v: f"${v:.2f}" if v is not None else "-",
-    "volume_millions": lambda v: f"{v / 1_000_000:.1f}M" if v is not None else "-",
-    "format_time_dd": lambda v: datetime.fromtimestamp(v).strftime("%H:%M %d") if v else "-",
-    "dash_if_none": lambda v: "-" if v is None else v,
+def join_pipes(values: Union[str, List[str]]) -> str:
+    """Join values with pipe separator."""
+    if isinstance(values, list):
+        return " | ".join(str(v) for v in values)
+    return str(values)
+
+def join_lines(values: Union[str, List[str]]) -> str:
+    """Join values with newline separator."""
+    if isinstance(values, list):
+        return "\n".join(str(v) for v in values)
+    return str(values)
+
+# Dictionary of predefined transforms
+TRANSFORMS: Dict[str, Callable] = {
     "dollarize": dollarize,
-    "join_lines": lambda values: "\n".join(str(v) for v in values),
-    "join_pipes": lambda values: " | ".join(str(v) for v in values)
+    "volume_millions": volume_millions,
+    "join_pipes": join_pipes,
+    "join_lines": join_lines
 }
 
+def parse_lambda(lambda_str: str) -> Callable:
+    """Parse a lambda function string into a callable function."""
+    try:
+        # Remove 'lambda' keyword and any whitespace
+        lambda_body = lambda_str.strip()
+        if not lambda_body.startswith('lambda'):
+            raise ValueError("Invalid lambda function format")
+        
+        # Extract the lambda expression
+        lambda_expr = lambda_body[6:].strip()  # Remove 'lambda' keyword
+        
+        # Create the function
+        return eval(lambda_expr)
+    except Exception as e:
+        raise ValueError(f"Invalid lambda function: {e}")
 
-def apply_transforms(field_map, data_rows):
-    from layout_lib.table import parse_field_map  # avoid circular import
-    _, final_keys = parse_field_map(field_map)
-    transform_map = {}
-
-    def collect_transforms(items):
-        for item in items:
-            if item.get("group"):
-                collect_transforms(item["children"])
-            else:
-                key = item["key"]
-                name = item.get("transform")
-                if name:
-                    transform_func = TRANSFORMS.get(name)
-                    if transform_func:
-                        transform_map[key] = transform_func
-                    else:
-                        print(f"⚠️ Invalid transform for '{key}': {name}")
-
-    collect_transforms(field_map)
-
+def apply_transforms(field_map: List[Dict], data_rows: List[Dict]) -> List[Dict]:
+    """Apply transforms to data rows based on field map."""
     transformed_rows = []
+    
     for row in data_rows:
-        new_row = {}
-        for key in final_keys:
-            transform = transform_map.get(key)
-
-            if "|" in key:
-                # Composite key (e.g., "Volume1|Volume2|Volume3")
-                keys = key.split("|")
-                values = [row.get(k, "") for k in keys]
-
-                if transform:
-                    try:
-                        new_row[key] = transform(values)
-                    except Exception as e:
-                        print(f"⚠️ Transform error for '{key}': {e}")
-                        new_row[key] = "-"
-                else:
-                    new_row[key] = ", ".join(str(v) for v in values)
+        transformed_row = {}
+        for field in field_map:
+            if "children" in field:
+                # Handle nested fields
+                transformed_row[field["label"]] = apply_transforms(field["children"], [row])[0]
             else:
-                val = row.get(key, "")
-                if transform:
-                    try:
-                        new_row[key] = transform(val)
-                    except Exception as e:
-                        print(f"⚠️ Transform error for '{key}': {e}")
-                        new_row[key] = "-"
+                key = field.get("key", "")
+                transform = field.get("transform")
+                
+                if not key:
+                    continue
+                
+                # Get the value(s)
+                if "|" in key:
+                    keys = key.split("|")
+                    values = [row.get(k.strip(), "") for k in keys]
                 else:
-                    new_row[key] = val
-
-        transformed_rows.append(new_row)
+                    values = row.get(key, "")
+                
+                # Apply transform if specified
+                if transform:
+                    if isinstance(transform, str):
+                        # Check if it's a predefined transform
+                        if transform in TRANSFORMS:
+                            transform_func = TRANSFORMS[transform]
+                        else:
+                            # Try to parse as lambda
+                            transform_func = parse_lambda(transform)
+                    else:
+                        # Direct function reference
+                        transform_func = transform
+                    
+                    try:
+                        transformed_row[field["label"]] = transform_func(values)
+                    except Exception as e:
+                        print(f"⚠️ Transform error for field '{key}': {e}")
+                        transformed_row[field["label"]] = str(values)
+                else:
+                    # No transform, just join if list
+                    if isinstance(values, list):
+                        transformed_row[field["label"]] = " ".join(str(v) for v in values)
+                    else:
+                        transformed_row[field["label"]] = str(values)
+        
+        transformed_rows.append(transformed_row)
+    
     return transformed_rows

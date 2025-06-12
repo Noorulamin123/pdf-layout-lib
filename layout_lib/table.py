@@ -2,7 +2,7 @@ from reportlab.platypus import Table, TableStyle, Paragraph
 from reportlab.lib import colors
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.lib.styles import getSampleStyleSheet
-from layout_lib.transform_utils import TRANSFORMS
+from layout_lib.transform_utils import TRANSFORMS, parse_lambda
 
 def parse_field_map(field_map):
     final_keys = []
@@ -58,26 +58,52 @@ def build_data_table(field_map, data_rows):
         for item in items:
             if item.get("group"):
                 collect_transforms(item["children"])
+            else:
+                if "transform" in item:
+                    transform = item["transform"]
+                    if isinstance(transform, str):
+                        if transform in TRANSFORMS:
+                            transform_map[item["key"]] = TRANSFORMS[transform]
+                        else:
+                            try:
+                                transform_map[item["key"]] = parse_lambda(transform)
+                            except Exception:
+                                transform_map[item["key"]] = None
+                    elif callable(transform):
+                        transform_map[item["key"]] = transform
+                    else:
+                        transform_map[item["key"]] = None
 
     collect_transforms(field_map)
 
     body_rows = []
     style = getSampleStyleSheet()["BodyText"]
 
+    def flatten_row(row, field_map):
+        flat = {}
+        for field in field_map:
+            if field.get("group"):
+                # Recursively flatten children
+                child_flat = flatten_row(row.get(field["label"], {}), field["children"])
+                flat.update(child_flat)
+            else:
+                key = field.get("key")
+                flat[key] = row.get(field["label"], "")
+        return flat
+
     for row in data_rows:
         new_row = []
+        flat_row = flatten_row(row, field_map)
         for key in final_keys:
-            value = row.get(key, "")
+            value = flat_row.get(key, "")
             transform = transform_map.get(key)
             if transform:
                 try:
                     value = transform(value)
                 except Exception as e:
                     print(f"⚠️ Transform error on key '{key}': {e}")
-
             if isinstance(value, str) and "\n" in value:
                 value = Paragraph(value.replace("\n", "<br/>"), style)
-
             new_row.append(value)
         body_rows.append(new_row)
 

@@ -8,10 +8,19 @@ from layout_lib.filter_utils import apply_filter
 
 def render_block(block, data_rows, group_context=None):
     if block["type"] == "table":
-        block["data_rows"] = data_rows
+        print("🔍 Table block found")
+        print(f"🔍 Block data: {block.get('data')}")
+        print(f"🔍 Data rows: {data_rows}")
+        # Use block['data'] if present, else fall back to data_rows
+        table_data_rows = block.get("data", data_rows)
+        print(f"🔍 Using table data rows: {table_data_rows}")
+        block["data_rows"] = table_data_rows
         field_map = block["field_map"]
-        transformed_rows = apply_transforms(field_map, data_rows)
+        print(f"🔍 Field map: {field_map}")
+        transformed_rows = apply_transforms(field_map, table_data_rows)
+        print(f"🔍 Transformed rows: {transformed_rows}")
         table_data = build_data_table(field_map, transformed_rows)
+        print(f"🔍 Final table data: {table_data}")
         return build_table(table_data, block)
 
     elif block["type"] == "separator":
@@ -34,6 +43,10 @@ def render_block(block, data_rows, group_context=None):
         value = ""
         if group_name and group_context and group_name in group_context:
             group_data = group_context[group_name]
+            if isinstance(group_data, list) and group_data:
+                # If group_data is a list, use the first item
+                group_data = group_data[0]
+            
             if "|" in key:
                 keys = key.split("|")
                 values = [group_data.get(k.strip(), "") for k in keys]
@@ -144,23 +157,46 @@ def interpret_layout(layout, data_rows, group_context=None):
             flowables.append(RLTable([row_items], hAlign='LEFT'))
 
     elif layout_type == "grid":
-        grid_rows = []
-        row = []
-        for i, block in enumerate(children):
-            if block.get("type") == "group":
-                continue
-            if "children" in block:
-                nested = interpret_layout(block, data_rows, group_context)
-                row.extend(nested)
-            else:
-                rendered = render_block(block, data_rows, group_context)
-                row.append(rendered)
-            if (i + 1) % columns == 0:
+        # If no data rows, just layout the blocks in a grid
+        if not data_rows:
+            grid_rows = []
+            row = []
+            for i, block in enumerate(children):
+                if block.get("type") == "group":
+                    continue
+                if "children" in block:
+                    nested = interpret_layout(block, data_rows, group_context)
+                    row.extend(nested)
+                else:
+                    rendered = render_block(block, data_rows, group_context)
+                    row.append(rendered)
+                if (i + 1) % columns == 0:
+                    grid_rows.append(row)
+                    row = []
+            if row:
                 grid_rows.append(row)
+            flowables.append(RLTable(grid_rows, hAlign='LEFT'))
+        else:
+            # Create a grid from data rows
+            grid_rows = []
+            for data_row in data_rows:
                 row = []
-        if row:
-            grid_rows.append(row)
-        flowables.append(RLTable(grid_rows, hAlign='LEFT'))
+                for block in children:
+                    if block.get("type") == "group":
+                        continue
+                    if "children" in block:
+                        # For nested blocks, create a sub-grid
+                        nested = interpret_layout(block, [data_row], group_context)
+                        row.extend(nested)
+                    else:
+                        # For single blocks, render with current data row
+                        rendered = render_block(block, [data_row], group_context)
+                        if rendered:
+                            row.append(rendered)
+                if row:
+                    grid_rows.append(row)
+            if grid_rows:
+                flowables.append(RLTable(grid_rows, hAlign='LEFT'))
 
     else:
         print(f"⚠️ Unsupported layout type '{layout_type}'. Supported types are: column, row, grid")

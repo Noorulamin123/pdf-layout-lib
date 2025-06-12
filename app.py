@@ -33,4 +33,9 @@ if __name__ == "__main__":
             # For simplicity, inject group_data into all groups; you can refine if needed
             block["data"] = group_data
 
+    # Inject data.json into the table block
+    for block in layout.get("children", []):
+        if block.get("type") == "table":
+            block["data"] = data
+
     interpret_dsl(layout, "custom_headers_table.pdf")

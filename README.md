@@ -1,229 +1,239 @@
-# PDF Template System Documentation
+# PDF Template System
 
-This system allows you to create dynamic PDF documents using a JSON-based template system. The template defines the layout and content of your PDF, while data is provided separately to populate the template.
+A flexible framework for generating PDF documents with dynamic content, supporting various layout components, data transformations, and filtering capabilities.
 
-## Basic Structure
+## Table of Contents
+1. [Overview](#overview)
+2. [Getting Started](#getting-started)
+3. [Core Concepts](#core-concepts)
+4. [Layout Components](#layout-components)
+5. [Layout Types](#layout-types)
+6. [Data Handling](#data-handling)
+7. [Transforms](#transforms)
+8. [Filters](#filters)
+9. [Advanced Features](#advanced-features)
+10. [Examples](#examples)
+11. [Troubleshooting](#troubleshooting)
+12. [Best Practices](#best-practices)
+13. [Contributing](#contributing)
+14. [License](#license)
 
-A template file (`layout.json`) consists of a JSON object with the following structure:
+## Overview
 
+The PDF Template System is a flexible framework for generating PDF documents with dynamic content. It supports various layout components, data transformations, and filtering capabilities.
+
+## Getting Started
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd pdf-template
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+
+### Basic Example
+```python
+from reportlab.platypus import SimpleDocTemplate
+from layout_lib.renderer import interpret_layout
+import json
+
+# Load layout and data
+with open("layout.json") as f:
+    layout = json.load(f)
+with open("data/data.json") as f:
+    data = json.load(f)
+
+# Generate PDF
+layout["data_rows"] = data
+doc = SimpleDocTemplate("output.pdf")
+flowables = interpret_layout(layout, data)
+doc.build(flowables)
+```
+
+## Core Concepts
+
+### Data Structure
+The system works with two main types of data:
+1. Table Data: List of objects for tabular display
+2. Group Data: Can be either a single object or a list of objects. When a list is provided, the filter will select one object for use.
+
+### Layout System
+- JSON-based layout definition
+- Component-based architecture
+- Support for nested layouts
+- Dynamic data binding
+
+### Components
+- Variable: Display single values
+- Table: Display tabular data
+- Group: Group related data
+- Separator: Visual separation
+
+## Layout Components
+
+### 1. Group Component
+Groups are one of the fundamental data containers in the system. They hold a single object of data and can be filtered. Other components (like variables) must reference a group to access its data.
+
+#### Basic Usage
 ```json
 {
-  "type": "column",
-  "children": [
-    // Layout blocks go here
-  ]
+  "type": "group",
+  "group_name": "stock_data",
+  "filter": "RIC=GOOGL.O"
 }
 ```
 
-## Layout Types
-
-### 1. Column Layout
-- Arranges elements vertically
-- Default layout type
-- Elements are stacked from top to bottom
-- Example:
+#### Advanced Usage with Multiple Filters
 ```json
 {
-  "type": "column",
-  "children": [
-    {
-      "type": "variable",
-      "label": "First Item",
-      "key": "first"
-    },
-    {
-      "type": "variable",
-      "label": "Second Item",
-      "key": "second"
-    }
-  ]
+  "type": "group",
+  "group_name": "stock_data",
+  "filter": {
+    "and": [
+      {"RIC": "GOOGL.O"},
+      {"Price": {">": 100}},
+      {"Volume": {">": 1000000}}
+    ]
+  }
 }
 ```
 
-### 2. Row Layout
-- Arranges elements horizontally
-- Elements are placed side by side
-- Useful for creating header sections or grouped information
-- Example:
-```json
-{
-  "type": "row",
-  "children": [
-    {
-      "type": "variable",
-      "label": "Left",
-      "key": "left"
-    },
-    {
-      "type": "separator",
-      "direction": "vertical",
-      "length": 100
-    },
-    {
-      "type": "variable",
-      "label": "Right",
-      "key": "right"
-    }
-  ]
-}
-```
+### 2. Variable Component
+Variables display values from a group's data. They must be associated with a group using the `group_name` field to access the data.
 
-### 3. Grid Layout
-- Arranges elements in a grid format
-- Requires `columns` property to specify number of columns
-- Elements flow from left to right, top to bottom
-- Example:
-```json
-{
-  "type": "grid",
-  "columns": 2,
-  "children": [
-    {
-      "type": "variable",
-      "label": "Top Left",
-      "key": "tl"
-    },
-    {
-      "type": "variable",
-      "label": "Top Right",
-      "key": "tr"
-    },
-    {
-      "type": "variable",
-      "label": "Bottom Left",
-      "key": "bl"
-    },
-    {
-      "type": "variable",
-      "label": "Bottom Right",
-      "key": "br"
-    }
-  ]
-}
-```
-
-## Block Types
-
-### 1. Variable Block
-Displays a single value with an optional label. Can handle multiple data keys and transformations.
-
+#### Basic Usage
 ```json
 {
   "type": "variable",
   "label": "Price",
   "key": "price",
-  "transform": "dollarize",
-  "group_name": "stock_data"
+  "group_name": "stock_data",  // References the group above
+  "transform": "dollarize"
 }
 ```
 
-Properties:
-- `label`: Display label for the variable
-- `key`: Data key to fetch the value. Can be a single key or multiple keys separated by pipes (e.g., "price|bid|ask")
-- `transform`: Optional transform to apply to the value
-- `group_name`: Optional group context to fetch data from
-
-Multiple keys example:
+#### Advanced Usage with Multiple Fields
 ```json
 {
   "type": "variable",
-  "label": "Price Range",
-  "key": "bid|ask",
-  "transform": "join_pipes",
-  "group_name": "stock_data"
+  "label": "Volume Data",
+  "key": "Volume1|Volume2|Volume3",  // Multiple fields separated by pipe
+  "group_name": "stock_data",  // References the group above
+  "transform": "join_lines"  // Combines multiple fields with line breaks
 }
 ```
 
-### 2. Table Block
-Creates a data table with headers and rows. Supports complex column structures with grouped headers.
+### Example: Group with Variables
+```json
+{
+  "type": "column",
+  "children": [
+    {
+      "type": "group",
+      "group_name": "stock_data",
+      "filter": "RIC=GOOGL.O"
+    },
+    {
+      "type": "variable",
+      "label": "Price",
+      "key": "price",
+      "group_name": "stock_data",  // References the group above
+      "transform": "dollarize"
+    },
+    {
+      "type": "variable",
+      "label": "Volume",
+      "key": "volume",
+      "group_name": "stock_data",  // References the same group
+      "transform": "volume_millions"
+    }
+  ]
+}
+```
 
+### 3. Table Component
+Displays data in a tabular format with support for multi-level headers.
+
+#### Basic Structure
 ```json
 {
   "type": "table",
+  "field_map": [...],
+  "style": {...}
+}
+```
+
+#### Multi-level Headers
+```json
+{
   "field_map": [
     {
       "label": "Financial Data",
       "group": true,
       "children": [
         {
-          "label": "Ticker\nSymbol",
-          "key": "Ticker"
-        },
-        {
-          "label": "Price",
+          "label": "Price Information",
           "group": true,
           "children": [
-            {
-              "label": "Ask\nPrice",
-              "key": "Ask",
-              "transform": "dollarize"
-            },
-            {
-              "label": "Bid\nPrice",
-              "key": "Bid",
-              "transform": "dollarize"
-            }
+            {"label": "Current", "key": "current_price", "transform": "dollarize"},
+            {"label": "Previous", "key": "previous_price", "transform": "dollarize"}
           ]
         }
       ]
     }
-  ],
+  ]
+}
+```
+
+#### Style Options
+```json
+{
   "style": {
-    "col_widths": [100, 100],
+    "col_widths": [80, 80, 80],  // Optional: If not provided, widths are calculated automatically based on content
     "font_name": "Helvetica",
-    "font_size": 10,
-    "grid": true
+    "font_size": 9,
+    "font_style": "bold-italic",
+    "body_font_size": 9,
+    "grid": true,
+    "header_background": "grey",
+    "header_text_color": "whitesmoke",
+    "body_background": "beige",
+    "alternate_row_colors": ["white", "lightgrey"],
+    "header_height": 30,
+    "row_height": 25
   }
 }
 ```
 
-#### Complex Table Structures
+> **Note:** The `col_widths` field is optional. When not provided, the table automatically calculates column widths based on the content:
+> - Each column's width is determined by the maximum width needed for its content
+> - Width calculation takes into account the specified font and text content
+> - A small padding (10 units) is added to ensure text doesn't touch cell borders
+> - This automatic calculation ensures all content is properly displayed without manual configuration
 
-1. **Grouped Headers**
-   - Use the `group` property to create header groups
-   - Nested groups create multi-level headers
-   - Example:
-   ```json
-   {
-     "label": "Financial Data",
-     "group": true,
-     "children": [
-       {
-         "label": "Price",
-         "group": true,
-         "children": [
-           {"label": "Ask", "key": "ask"},
-           {"label": "Bid", "key": "bid"}
-         ]
-       }
-     ]
-   }
-   ```
+### 4. Separator Component
+Creates visual separators in the document.
 
-2. **Multi-line Headers**
-   - Use `\n` in labels to create multi-line headers
-   - Example:
-   ```json
-   {
-     "label": "Ticker\nSymbol",
-     "key": "Ticker"
-   }
-   ```
+#### Basic Usage
+```json
+{
+  "type": "separator",
+  "length": 400,
+  "thickness": 2,
+  "color": "blue",
+  "direction": "horizontal"
+}
+```
 
-3. **Multiple Fields in One Column**
-   - Use pipe-separated keys with appropriate transforms
-   - Example:
-   ```json
-   {
-     "label": "Volume Data",
-     "key": "Volume1|Volume2|Volume3",
-     "transform": "join_lines"
-   }
-   ```
-
-### 3. Separator Block
-Creates a visual separator line with customizable properties.
-
+#### Advanced Usage with Styling
 ```json
 {
   "type": "separator",
@@ -233,215 +243,382 @@ Creates a visual separator line with customizable properties.
   "direction": "horizontal",
   "margin_before": 20,
   "margin_after": 20,
-  "dash": [3, 2]
+  "dash": [3, 2],
+  "style": {
+    "opacity": 0.5,
+    "line_cap": "round"
+  }
 }
 ```
 
-Properties:
-- `length`: Length of the separator in points
-- `thickness`: Line thickness in points
-- `color`: Color name (e.g., "blue", "red", "black")
-- `direction`: "horizontal" or "vertical"
-- `margin_before`: Space before the separator
-- `margin_after`: Space after the separator
-- `dash`: Optional array for dashed line pattern [dash_length, gap_length]
+## Layout Types
 
-### 4. Group Block
-Defines a data context for variables. Can filter data based on conditions.
+### 1. Column Layout
+Arranges elements vertically, stacking them from top to bottom.
+
+#### Key Features
+- Vertical arrangement of elements
+- Default layout type
+- Supports nested layouts
+- Automatic spacing between elements
+- Flexible width management
+
+#### Basic Example
+```json
+{
+  "type": "column",
+  "children": [
+    {
+      "type": "group",
+      "group_name": "data_group"
+    },
+    {
+      "type": "variable",
+      "label": "First Item",
+      "key": "first",
+      "group_name": "data_group"
+    },
+    {
+      "type": "variable",
+      "label": "Second Item",
+      "key": "second",
+      "group_name": "data_group"
+    }
+  ]
+}
+```
+
+### 2. Row Layout
+Arranges elements horizontally, placing them side by side.
+
+#### Key Features
+- Horizontal arrangement of elements
+- Automatic width distribution
+- Support for flexible spacing
+- Alignment options
+- Nested component support
+
+#### Basic Example
+```json
+{
+  "type": "row",
+  "children": [
+    {
+      "type": "group",
+      "group_name": "data_group"
+    },
+    {
+      "type": "variable",
+      "label": "Left",
+      "key": "left",
+      "group_name": "data_group"
+    },
+    {
+      "type": "separator",
+      "direction": "vertical",
+      "length": 100
+    },
+    {
+      "type": "variable",
+      "label": "Right",
+      "key": "right",
+      "group_name": "data_group"
+    }
+  ]
+}
+```
+
+### 3. Grid Layout
+Arranges elements in a grid format, flowing from left to right and top to bottom.
+
+#### Key Features
+- Grid-based arrangement
+- Configurable number of columns
+- Automatic row wrapping
+- Equal or custom column widths
+- Flexible cell sizing
+
+#### Basic Example
+```json
+{
+  "type": "grid",
+  "columns": 2,
+  "children": [
+    {
+      "type": "group",
+      "group_name": "data_group"
+    },
+    {
+      "type": "variable",
+      "label": "Top Left",
+      "key": "tl",
+      "group_name": "data_group"
+    },
+    {
+      "type": "variable",
+      "label": "Top Right",
+      "key": "tr",
+      "group_name": "data_group"
+    },
+    {
+      "type": "variable",
+      "label": "Bottom Left",
+      "key": "bl",
+      "group_name": "data_group"
+    },
+    {
+      "type": "variable",
+      "label": "Bottom Right",
+      "key": "br",
+      "group_name": "data_group"
+    }
+  ]
+}
+```
+
+## Data Handling
+
+### 1. Data Structure Examples
+
+#### Table Data (List of Objects)
+```python
+table_data = [
+    {
+        "Ticker": "AAPL",
+        "RIC": "AAPL.O",
+        "Ask": 175.25,
+        "Bid": 175.20,
+        "Last": 175.22,
+        "Volume1": 12500000,
+        "Exchange": "NASDAQ"
+    },
+    {
+        "Ticker": "MSFT",
+        "RIC": "MSFT.O",
+        "Ask": 420.10,
+        "Bid": 420.05,
+        "Last": 420.08,
+        "Volume1": 8900000,
+        "Exchange": "NASDAQ"
+    }
+]
+```
+
+#### Group Data Examples
+
+##### Single Object
+```python
+group_data = {
+    "RIC": "GOOGL.O",
+    "Price": 180.50,
+    "Volume": 7200000,
+    "Exchange": "NASDAQ",
+    "Currency": "USD"
+}
+```
+
+##### List of Objects
+```python
+group_data = [
+    {
+        "RIC": "GOOGL.O",
+        "Price": 180.50,
+        "Volume": 7200000,
+        "Exchange": "NASDAQ",
+        "Currency": "USD"
+    },
+    {
+        "RIC": "AAPL.O",
+        "Price": 175.22,
+        "Volume": 12500000,
+        "Exchange": "NASDAQ",
+        "Currency": "USD"
+    }
+]
+```
+
+### 2. Programmatic Data Passing
+
+#### Group Data Injection
+```python
+# Load group data (can be either single object or list of objects)
+with open("data/group_data.json") as f:
+    group_data = json.load(f)
+
+# Inject group data into layout
+for block in layout.get("children", []):
+    if block.get("type") == "group":
+        group_name = block.get("group_name")
+        filter_condition = block.get("filter")
+        # If group_data is a list, the filter will select one object
+        # If group_data is a single object, it will be used as is
+        block["data"] = group_data
+```
+
+#### Table Data Injection
+```python
+# Load table data (list of objects)
+with open("data/data.json") as f:
+    table_data = json.load(f)  # List of objects
+
+# Inject table data into layout
+for block in layout.get("children", []):
+    if block.get("type") == "table":
+        block["data"] = table_data
+```
+
+> **Important Notes:**
+> - Variables must always be associated with a group using the `group_name` field
+> - Group data can be either a single object or a list of objects
+> - When group data is a list, the filter will select one object for use
+> - Table data must be a list of objects, where each object represents a row
+> - Never use variables without a group association
+
+## Transforms
+
+Transforms are functions that modify the display of data values. The system comes with some basic transforms, but you can easily create your own custom transforms.
+
+### Basic Transforms
 
 ```json
 {
+  "type": "variable",
+  "label": "Price",
+  "key": "price",
+  "transform": "dollarize"  // Formats as currency
+}
+```
+
+### Custom Transforms
+
+You can create custom transforms in two ways:
+
+1. Using Lambda Functions (Inline):
+```json
+{
+  "type": "variable",
+  "label": "Custom Price",
+  "key": "price",
+  "transform": "lambda x: f'Price: ${x:.2f}'"
+}
+```
+
+2. Using Python Functions (Defined in your code):
+```python
+# Create a new file: my_transforms.py
+from layout_lib.transform_utils import TRANSFORMS
+
+# Define your transform functions
+def format_currency(value):
+    return f"${value:,.2f}"
+
+def format_percentage(value):
+    return f"{value:.1f}%"
+
+def format_phone(value):
+    return f"({value[:3]}) {value[3:6]}-{value[6:]}"
+
+# Register your transforms
+TRANSFORMS.update({
+    "format_currency": format_currency,
+    "format_percentage": format_percentage,
+    "format_phone": format_phone
+})
+
+# In your main script (e.g., app.py)
+import my_transforms  # This will register your transforms
+
+# Now you can use them in your layout
+layout = {
+    "type": "variable",
+    "label": "Price",
+    "key": "price",
+    "transform": "format_currency"  // Use the registered transform name
+}
+```
+
+> **Note:** Each field can only have one transform applied. If you need multiple transformations, create a custom transform function that combines them.
+
+## Filters
+
+### 1. Basic Filters
+
+#### Simple Equality
+```json
+{
   "type": "group",
-  "group_name": "stock_data",
+  "group_name": "stocks",
   "filter": "RIC=GOOGL.O"
 }
 ```
 
-Properties:
-- `group_name`: Unique identifier for the group
-- `filter`: Simple filter condition in format "field=value" (exact match only)
-
-### Group Data Sources
-
-1. **Direct Data Injection**
-   ```json
-   {
-     "type": "group",
-     "group_name": "stock_data",
-     "data": {
-       "price": 150.25,
-       "volume": 1000000,
-       "change": 2.5
-     }
-   }
-   ```
-
-2. **Filtered Data from Array**
-   ```json
-   {
-     "type": "group",
-     "group_name": "stock_data",
-     "filter": "RIC=GOOGL.O",
-     "data": [
-       {"RIC": "GOOGL.O", "price": 150.25},
-       {"RIC": "AAPL.O", "price": 175.50}
-     ]
-   }
-   ```
-
-### Filter Limitations
-
-The current implementation has the following limitations:
-
-1. **Single Field Filtering**
-   - Only one field can be filtered at a time
-   - Format must be "field=value"
-   - Example: `"filter": "RIC=GOOGL.O"`
-
-2. **Exact Match Only**
-   - Filters perform exact matching
-   - No partial matches or pattern matching
-   - No comparison operators (>, <, >=, <=)
-
-3. **No Complex Conditions**
-   - No support for AND/OR operations
-   - No support for multiple conditions
-   - No support for nested conditions
-
-### Workarounds for Complex Filtering
-
-If you need more complex filtering, consider these approaches:
-
-1. **Pre-filter Data**
-   ```python
-   # Pre-filter your data before passing it to the template
-   filtered_data = [item for item in raw_data 
-                   if item.get("market") == "NYSE" 
-                   and item.get("sector") == "tech"]
-   
-   group_data = {
-       "type": "group",
-       "group_name": "filtered_data",
-       "data": filtered_data
-   }
-   ```
-
-2. **Use Multiple Groups**
-   ```json
-   {
-     "type": "column",
-     "children": [
-       {
-         "type": "group",
-         "group_name": "market_data",
-         "filter": "market=NYSE"
-       },
-       {
-         "type": "group",
-         "group_name": "sector_data",
-         "filter": "sector=tech"
-       }
-     ]
-   }
-   ```
-
-3. **Transform Data Structure**
-   ```json
-   {
-     "type": "group",
-     "group_name": "combined_data",
-     "data": {
-       "market_sector": "NYSE_tech",
-       "items": [...]
-     }
-   }
-   ```
-
-### Future Enhancements
-
-The following features could be added to enhance filtering capabilities:
-
-1. **Multiple Field Filtering**
-   ```json
-   {
-     "filter": {
-       "market": "NYSE",
-       "sector": "tech"
-     }
-   }
-   ```
-
-2. **Comparison Operators**
-   ```json
-   {
-     "filter": {
-       "price": { ">": 100 },
-       "volume": { "<=": 1000000 }
-     }
-   }
-   ```
-
-3. **Logical Operations**
-   ```json
-   {
-     "filter": {
-       "or": [
-         { "market": "NYSE" },
-         { "market": "NASDAQ" }
-       ]
-     }
-   }
-   ```
-
-## Data Transforms
-
-### Built-in Transforms
-
-1. `dollarize`: Formats number as currency (e.g., "$100.00")
-2. `price`: Formats price with 2 decimal places
-3. `volume_millions`: Converts volume to millions format
-4. `format_time_dd`: Formats timestamp as "HH:MM DD"
-5. `dash_if_none`: Replaces None/null values with "-"
-6. `join_lines`: Joins multiple values with newlines
-7. `join_pipes`: Joins multiple values with " | "
-
-### Adding Custom Transforms
-
-To add custom transforms, modify the `transform_utils.py` file:
-
-1. Define your transform function:
-```python
-def my_custom_transform(value):
-    # Your transformation logic here
-    return transformed_value
-```
-
-2. Add it to the TRANSFORMS dictionary:
-```python
-TRANSFORMS = {
-    # ... existing transforms ...
-    "my_custom_transform": my_custom_transform
-}
-```
-
-Example of a custom transform:
-```python
-def format_percentage(value):
-    return f"{float(value):.2f}%" if value is not None else "-"
-
-TRANSFORMS = {
-    # ... existing transforms ...
-    "format_percentage": format_percentage
-}
-```
-
-Usage in template:
+#### Multiple Conditions
 ```json
 {
-  "type": "variable",
-  "label": "Growth",
-  "key": "growth_rate",
-  "transform": "format_percentage"
+  "type": "group",
+  "group_name": "stocks",
+  "filter": "RIC=GOOGL.O AND Price>100"
+}
+```
+
+### 2. Advanced Filters
+
+#### Complex Conditions
+```json
+{
+  "type": "group",
+  "group_name": "stocks",
+  "filter": {
+    "and": [
+      {"RIC": "GOOGL.O"},
+      {"Price": {">": 100}},
+      {"Volume": {">": 1000000}}
+    ]
+  }
+}
+```
+
+#### Nested Conditions
+```json
+{
+  "type": "group",
+  "group_name": "stocks",
+  "filter": {
+    "or": [
+      {
+        "and": [
+          {"RIC": "GOOGL.O"},
+          {"Price": {">": 100}}
+        ]
+      },
+      {
+        "and": [
+          {"RIC": "AAPL.O"},
+          {"Price": {">": 150}}
+        ]
+      }
+    ]
+  }
+}
+```
+
+### 3. Conditional Filtering
+
+#### Dynamic Filters
+```python
+def create_dynamic_filter(min_price, max_volume):
+    return {
+        "and": [
+            {"Price": {">": min_price}},
+            {"Volume": {"<": max_volume}}
+        ]
+    }
+
+# Use in layout
+layout = {
+    "type": "group",
+    "group_name": "stocks",
+    "filter": create_dynamic_filter(100, 1000000)
 }
 ```
 
@@ -449,23 +626,28 @@ Usage in template:
 
 ### 1. Nested Layouts
 Combine different layout types for complex arrangements:
-
 ```json
 {
   "type": "column",
   "children": [
+    {
+      "type": "group",
+      "group_name": "data_group"
+    },
     {
       "type": "row",
       "children": [
         {
           "type": "variable",
           "label": "Left",
-          "key": "left"
+          "key": "left",
+          "group_name": "data_group"
         },
         {
           "type": "variable",
           "label": "Right",
-          "key": "right"
+          "key": "right",
+          "group_name": "data_group"
         }
       ]
     },
@@ -479,7 +661,6 @@ Combine different layout types for complex arrangements:
 
 ### 2. Conditional Data Display
 Use group filters to show different data based on conditions:
-
 ```json
 {
   "type": "column",
@@ -499,461 +680,353 @@ Use group filters to show different data based on conditions:
 }
 ```
 
-## Group Layout System
-
-The group system provides a powerful way to organize and filter data for display. It allows you to create data contexts that can be referenced by variables and other components.
-
-### Group Block Structure
-
+### 3. Multiple Fields in One Column
+Use pipe-separated keys with appropriate transforms:
 ```json
 {
   "type": "group",
-  "group_name": "stock_data",
-  "filter": "RIC=GOOGL.O",
-  "data": {
-    // Optional direct data injection
+  "group_name": "data_group"
+},
+{
+  "type": "variable",
+  "label": "Volume Data",
+  "key": "Volume1|Volume2|Volume3",
+  "transform": "join_lines",
+  "group_name": "data_group"
+}
+```
+
+### 4. Multi-line Headers
+Use `\n` in labels to create multi-line headers:
+```json
+{
+  "type": "group",
+  "group_name": "data_group"
+},
+{
+  "type": "variable",
+  "label": "Ticker\nSymbol",
+  "key": "Ticker",
+  "group_name": "data_group"
+}
+```
+
+## Examples
+
+### 1. Table Examples
+
+#### Basic Single-Level Table
+```json
+{
+  "type": "table",
+  "field_map": [
+    {"label": "Ticker", "key": "Ticker"},
+    {"label": "RIC", "key": "RIC"},
+    {"label": "Price", "key": "Last", "transform": "dollarize"},
+    {"label": "Volume", "key": "Volume1", "transform": "volume_millions"}
+  ],
+  "style": {
+    "grid": true,
+    "header_background": "grey",
+    "header_text_color": "whitesmoke"
   }
 }
 ```
 
-Properties:
-- `group_name`: Unique identifier for the group
-- `filter`: Simple filter condition in format "field=value" (exact match only)
-- `data`: Optional direct data injection (can be object or array)
+#### Multi-Level Table with Nested Groups
+```json
+{
+  "type": "table",
+  "field_map": [
+    {
+      "label": "Financial Data",
+      "group": true,
+      "children": [
+        {"label": "Ticker\nSymbol", "key": "Ticker"},
+        {"label": "RIC\nCode", "key": "RIC"},
+        {
+          "label": "Price\nData",
+          "group": true,
+          "children": [
+            {"label": "Ask\nPrice", "key": "Ask", "transform": "dollarize"},
+            {"label": "Bid\nPrice", "key": "Bid", "transform": "dollarize"},
+            {"label": "Last\nPrice", "key": "Last", "transform": "dollarize"}
+          ]
+        },
+        {"label": "Volume\nTraded", "key": "Volume1|Volume2", "transform": "join_lines"},
+        {"label": "Exchange\nName", "key": "Exchange"}
+      ]
+    }
+  ],
+  "style": {
+    "font_name": "Helvetica",
+    "font_size": 9,
+    "font_style": "bold-italic",
+    "body_font_size": 9,
+    "grid": true,
+    "header_background": "grey",
+    "header_text_color": "whitesmoke",
+    "body_background": "beige",
+    "alternate_row_colors": ["white", "lightgrey"]
+  }
+}
+```
 
-### Group Data Sources
+#### Table with Multiple Fields in One Column
+```json
+{
+  "type": "table",
+  "field_map": [
+    {"label": "Ticker", "key": "Ticker"},
+    {"label": "RIC", "key": "RIC"},
+    {
+      "label": "Volume Data",
+      "key": "Volume1|Volume2|Volume3",
+      "transform": "join_lines"
+    },
+    {"label": "Exchange", "key": "Exchange"}
+  ],
+  "style": {
+    "grid": true,
+    "header_background": "grey",
+    "header_text_color": "whitesmoke"
+  }
+}
+```
 
-1. **Direct Data Injection**
-   ```json
-   {
-     "type": "group",
-     "group_name": "stock_data",
-     "data": {
-       "price": 150.25,
-       "volume": 1000000,
-       "change": 2.5
-     }
-   }
+#### Complete Example with Data
+```python
+# Create layout with multi-level headers
+layout = {
+    "type": "column",
+    "children": [
+        {
+            "type": "table",
+            "field_map": [
+                {
+                    "label": "Financial Data",
+                    "group": True,
+                    "children": [
+                        {"label": "Ticker\nSymbol", "key": "Ticker"},
+                        {"label": "RIC\nCode", "key": "RIC"},
+                        {
+                            "label": "Price\nData",
+                            "group": True,
+                            "children": [
+                                {"label": "Ask\nPrice", "key": "Ask", "transform": "dollarize"},
+                                {"label": "Bid\nPrice", "key": "Bid", "transform": "dollarize"},
+                                {"label": "Last\nPrice", "key": "Last", "transform": "dollarize"}
+                            ]
+                        },
+                        {"label": "Volume\nTraded", "key": "Volume1|Volume2", "transform": "join_lines"},
+                        {"label": "Exchange\nName", "key": "Exchange"}
+                    ]
+                }
+            ],
+            "style": {
+                "font_name": "Helvetica",
+                "font_size": 9,
+                "font_style": "bold-italic",
+                "body_font_size": 9,
+                "grid": true,
+                "header_background": "grey",
+                "header_text_color": "whitesmoke",
+                "body_background": "beige",
+                "alternate_row_colors": ["white", "lightgrey"]
+            }
+        }
+    ]
+}
+
+# Prepare data
+data = [
+    {
+        "Ticker": "AAPL",
+        "RIC": "AAPL.O",
+        "Ask": 175.25,
+        "Bid": 175.20,
+        "Last": 175.22,
+        "Volume1": 12500000,
+        "Volume2": 12500000,
+        "Exchange": "NASDAQ"
+    },
+    {
+        "Ticker": "MSFT",
+        "RIC": "MSFT.O",
+        "Ask": 420.10,
+        "Bid": 420.05,
+        "Last": 420.08,
+        "Volume1": 8900000,
+        "Volume2": 8900000,
+        "Exchange": "NASDAQ"
+    }
+]
+
+# Generate PDF
+layout["data_rows"] = data
+doc = SimpleDocTemplate("financial_table.pdf")
+flowables = interpret_layout(layout, data)
+doc.build(flowables)
+```
+
+> **Table Features Summary:**
+> - Single and multi-level headers using `group: true`
+> - Multi-line headers using `\n` in labels
+> - Multiple fields in one column using pipe-separated keys
+> - Transforms for data formatting (e.g., `dollarize`, `volume_millions`, `join_lines`)
+> - Customizable styling (fonts, colors, grid, etc.)
+> - Automatic column width calculation when `col_widths` is not specified
+> - Support for nested groups and complex data structures
+
+### 2. Group with Filter Example
+```python
+# Create layout with group and filter
+layout = {
+    "type": "column",
+    "children": [
+        {
+            "type": "group",
+            "group_name": "stock_data",
+            "filter": "RIC=GOOGL.O"
+        },
+        {
+            "type": "variable",
+            "label": "Price",
+            "key": "Price",
+            "transform": "dollarize",
+            "group_name": "stock_data"
+        }
+    ]
+}
+
+# Load and inject group data (single object)
+with open("data/group_data.json") as f:
+    group_data = json.load(f)  # Should be a single object
+
+for block in layout["children"]:
+    if block["type"] == "group":
+        block["data"] = group_data  # Single object
+
+# Generate PDF
+doc = SimpleDocTemplate("group_example.pdf")
+flowables = interpret_layout(layout, [])
+doc.build(flowables)
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Variable Not Found**
+   - Ensure the variable is associated with a group using `group_name`
+   - Check that the group data contains the specified key
+   - Verify the group filter is correctly matching data
+
+2. **Table Rendering Issues**
+   - Check that data rows match the field map structure
+   - Verify all required fields are present in the data
+   - Ensure transforms are properly defined for custom formatting
+
+3. **Filter Not Working**
+   - Verify the filter syntax matches the supported format
+   - Check that the data structure matches the filter conditions
+   - Ensure group data is properly injected into the layout
+
+4. **Transform Errors**
+   - Verify transform function exists in TRANSFORMS dictionary
+   - Check that input data matches transform function requirements
+   - Ensure proper error handling in custom transforms
+
+### Debug Tips
+
+1. **Enable Debug Logging**
+   ```python
+   import logging
+   logging.basicConfig(level=logging.DEBUG)
    ```
 
-2. **Filtered Data from Array**
-   ```json
-   {
-     "type": "group",
-     "group_name": "stock_data",
-     "filter": "RIC=GOOGL.O",
-     "data": [
-       {"RIC": "GOOGL.O", "price": 150.25},
-       {"RIC": "AAPL.O", "price": 175.50}
-     ]
-   }
-   ```
+2. **Check Data Flow**
+   - Print group data after filtering
+   - Verify table data structure
+   - Check transform function outputs
 
-### Group-Variable Interaction
+3. **Validate Layout**
+   - Test components individually
+   - Verify group associations
+   - Check filter conditions
 
-Variables can reference group data using the `group_name` property. This creates a powerful data binding system.
-
-1. **Basic Group-Variable Binding**
-   ```json
-   {
-     "type": "column",
-     "children": [
-       {
-         "type": "group",
-         "group_name": "stock_data",
-         "filter": "RIC=GOOGL.O"
-       },
-       {
-         "type": "variable",
-         "label": "Stock Price",
-         "key": "price",
-         "group_name": "stock_data"
-       }
-     ]
-   }
-   ```
-
-2. **Multiple Variables in Same Group**
-   ```json
-   {
-     "type": "column",
-     "children": [
-       {
-         "type": "group",
-         "group_name": "stock_data",
-         "filter": "RIC=GOOGL.O"
-       },
-       {
-         "type": "variable",
-         "label": "Price",
-         "key": "price",
-         "group_name": "stock_data"
-       },
-       {
-         "type": "variable",
-         "label": "Volume",
-         "key": "volume",
-         "group_name": "stock_data"
-       }
-     ]
-   }
-   ```
-
-3. **Nested Group Contexts**
-   ```json
-   {
-     "type": "column",
-     "children": [
-       {
-         "type": "group",
-         "group_name": "market_data",
-         "filter": "market=NYSE"
-       },
-       {
-         "type": "group",
-         "group_name": "stock_data",
-         "filter": "RIC=GOOGL.O"
-       },
-       {
-         "type": "variable",
-         "label": "Market",
-         "key": "market",
-         "group_name": "market_data"
-       },
-       {
-         "type": "variable",
-         "label": "Stock Price",
-         "key": "price",
-         "group_name": "stock_data"
-       }
-     ]
-   }
-   ```
-
-### Group Data Flow
-
-1. **Data Resolution Process**
-   - When a group block is encountered, the system:
-     1. Checks for direct data injection
-     2. If filter is present, applies it to array data
-     3. Stores resolved data in group context
-   - When a variable references a group:
-     1. Looks up data in group context
-     2. Applies any specified transforms
-     3. Renders the result
-
-2. **Data Inheritance**
-   ```json
-   {
-     "type": "column",
-     "children": [
-       {
-         "type": "group",
-         "group_name": "parent_data",
-         "data": {"common": "value"}
-       },
-       {
-         "type": "group",
-         "group_name": "child_data",
-         "data": {"specific": "value"}
-       },
-       {
-         "type": "variable",
-         "label": "Common Value",
-         "key": "common",
-         "group_name": "parent_data"
-       },
-       {
-         "type": "variable",
-         "label": "Specific Value",
-         "key": "specific",
-         "group_name": "child_data"
-       }
-     ]
-   }
-   ```
-
-### Advanced Group Features
-
-1. **Multiple Filters**
-   ```json
-   {
-     "type": "group",
-     "group_name": "filtered_data",
-     "filter": "market=NYSE&sector=tech"
-   }
-   ```
-
-2. **Dynamic Group Names**
-   ```json
-   {
-     "type": "variable",
-     "label": "Dynamic Group",
-     "key": "group_name",
-     "group_name": "config"
-   }
-   ```
-
-3. **Group Data Transformation**
-   ```json
-   {
-     "type": "group",
-     "group_name": "transformed_data",
-     "data": {
-       "raw": [1, 2, 3],
-       "transformed": "1|2|3"
-     }
-   }
-   ```
-
-### Best Practices for Groups
-
-1. **Naming Conventions**
-   - Use descriptive group names
-   - Follow consistent naming patterns
-   - Avoid reserved names
-
-2. **Data Organization**
-   - Group related data together
-   - Keep group data structures consistent
-   - Use appropriate data types
-
-3. **Filter Usage**
-   - Keep filters simple and clear
-   - Use meaningful field names
-   - Handle edge cases in filters
-
-4. **Performance Considerations**
-   - Minimize number of groups
-   - Use efficient filter conditions
-   - Cache frequently used group data
-
-5. **Error Handling**
-   - Handle missing group data gracefully
-   - Provide fallback values
-   - Log group resolution errors
+4. **Common Solutions**
+   - Use proper group associations for variables
+   - Ensure data structure matches layout requirements
+   - Implement proper error handling in transforms
+   - Validate filter conditions before use
 
 ## Best Practices
 
-1. **Data Organization**
-   - Use groups to organize related data
-   - Keep data structures consistent
-   - Use meaningful group names
+### 1. Layout Design
+- Keep layouts modular and reusable
+- Use consistent naming conventions
+- Document complex layouts
+- Use appropriate spacing and margins
 
-2. **Layout Design**
-   - Use nested layouts for complex arrangements
-   - Keep table column widths reasonable
-   - Use separators to visually divide sections
-   - Maintain consistent spacing
+### 2. Data Organization
+- Structure data consistently
+- Use meaningful field names
+- Group related data together
+- Validate data before rendering
 
-3. **Transforms**
-   - Apply appropriate transforms for data formatting
-   - Create custom transforms for repeated formatting patterns
-   - Handle null/empty values appropriately
+### 3. Performance
+- Minimize nested structures
+- Use efficient filters
+- Cache frequently used data
+- Optimize transform functions
 
-4. **Performance**
-   - Keep template structure clean and organized
-   - Avoid deeply nested structures when possible
-   - Use appropriate data types for values
+### 4. Maintenance
+- Keep documentation updated
+- Version control your layouts
+- Test with various data sets
+- Monitor error logs
 
-5. **Maintenance**
-   - Document custom transforms
-   - Use consistent naming conventions
-   - Keep templates modular and reusable
+## Contributing
 
-### Advanced Filtering System
+### Development Setup
 
-The template system now supports a powerful filtering system that can handle complex conditions. Filters can be specified in two formats:
-
-1. **Simple Format** (Legacy)
-   ```json
-   {
-     "filter": "field=value"
-   }
+1. **Clone the Repository**
+   ```bash
+   git clone <repository-url>
+   cd pdf-template
    ```
 
-2. **Advanced Format**
-   ```json
-   {
-     "filter": {
-       "field": "value"
-     }
-   }
+2. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
    ```
 
-#### Comparison Operators
-
-The following comparison operators are supported:
-
-```json
-{
-  "filter": {
-    "price": { ">": 100 },
-    "volume": { "<=": 1000000 },
-    "status": { "!=": "inactive" }
-  }
-}
-```
-
-Available operators:
-- `=`: Equal to
-- `!=`: Not equal to
-- `>`: Greater than
-- `>=`: Greater than or equal to
-- `<`: Less than
-- `<=`: Less than or equal to
-- `in`: Value is in list
-- `not_in`: Value is not in list
-- `contains`: String contains value
-- `starts_with`: String starts with value
-- `ends_with`: String ends with value
-
-#### Logical Operations
-
-1. **AND Operation**
-   ```json
-   {
-     "filter": {
-       "and": [
-         { "market": "NYSE" },
-         { "sector": "tech" },
-         { "price": { ">": 100 } }
-       ]
-     }
-   }
+3. **Run Tests**
+   ```bash
+   python -m unittest discover tests
    ```
 
-2. **OR Operation**
-   ```json
-   {
-     "filter": {
-       "or": [
-         { "market": "NYSE" },
-         { "market": "NASDAQ" }
-       ]
-     }
-   }
-   ```
+### Code Style
 
-3. **NOT Operation**
-   ```json
-   {
-     "filter": {
-       "not": {
-         "status": "inactive"
-       }
-     }
-   }
-   ```
+- Follow PEP 8 guidelines
+- Use type hints
+- Add docstrings to functions
+- Write unit tests for new features
 
-4. **Combined Operations**
-   ```json
-   {
-     "filter": {
-       "and": [
-         {
-           "or": [
-             { "market": "NYSE" },
-             { "market": "NASDAQ" }
-           ]
-         },
-         { "sector": "tech" }
-       ]
-     }
-   }
-   ```
+### Pull Request Process
 
-#### String Operations
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
 
-```json
-{
-  "filter": {
-    "name": { "contains": "tech" },
-    "ticker": { "starts_with": "GOOG" },
-    "description": { "ends_with": "Inc." }
-  }
-}
-```
+## License
 
-#### List Operations
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-```json
-{
-  "filter": {
-    "sectors": { "in": ["tech", "finance"] },
-    "exchanges": { "not_in": ["OTC"] }
-  }
-}
-```
+## Acknowledgments
 
-#### Examples
-
-1. **Complex Market Filter**
-   ```json
-   {
-     "filter": {
-       "and": [
-         {
-           "or": [
-             { "market": "NYSE" },
-             { "market": "NASDAQ" }
-           ]
-         },
-         { "sector": "tech" },
-         { "price": { ">": 100 } },
-         { "volume": { ">=": 1000000 } }
-       ]
-     }
-   }
-   ```
-
-2. **Status and Type Filter**
-   ```json
-   {
-     "filter": {
-       "and": [
-         { "status": "active" },
-         {
-           "or": [
-             { "type": "stock" },
-             { "type": "etf" }
-           ]
-         }
-       ]
-     }
-   }
-   ```
-
-3. **Text Search Filter**
-   ```json
-   {
-     "filter": {
-       "and": [
-         { "name": { "contains": "tech" } },
-         { "description": { "contains": "software" } }
-       ]
-     }
-   }
-   ```
-
-#### Best Practices for Filtering
-
-1. **Performance**
-   - Use simple filters when possible
-   - Avoid deeply nested conditions
-   - Consider pre-filtering large datasets
-
-2. **Readability**
-   - Use meaningful field names
-   - Break complex filters into logical groups
-   - Add comments for complex conditions
-
-3. **Error Handling**
-   - Handle missing fields gracefully
-   - Use appropriate data types
-   - Validate filter conditions
-
-4. **Maintenance**
-   - Keep filters modular
-   - Document complex conditions
-   - Use consistent naming conventions 
+- ReportLab for the PDF generation capabilities
+- Contributors and maintainers of the project 

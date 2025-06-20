@@ -467,12 +467,35 @@ for block in layout.get("children", []):
         block["data"] = table_data
 ```
 
-> **Important Notes:**
-> - Variables must always be associated with a group using the `group_name` field
-> - Group data can be either a single object or a list of objects
-> - When group data is a list, the filter will select one object for use
-> - Table data must be a list of objects, where each object represents a row
-> - Never use variables without a group association
+### 3. Global vs. Local Data Population
+
+There are two main ways to provide data to your layout:
+
+**1. Global Data (`data_rows`):**
+- Set as `layout["data_rows"] = data` (where `data` is a list of objects).
+- Passed to the renderer as a global dataset, available to all components.
+- Useful for layouts or tables that need access to the entire dataset.
+
+**2. Local Data (`block["data"]`):**
+- Set as `block["data"] = data` for a specific block (e.g., a table or group).
+- Only available to that block and its children.
+- Useful if you want to provide different data to different tables or groups, or if a block expects its own data.
+
+**Why use both?**
+- `data_rows` is for global, shared data.
+- `block["data"]` is for targeted, block-specific data.
+- This dual approach gives you flexibility: you can provide a default dataset for the whole layout, but override it for specific blocks as needed.
+
+**Example:**
+```python
+layout["data_rows"] = data  # Global data for the whole layout
+
+for block in layout.get("children", []):
+    if block.get("type") == "table":
+        block["data"] = data  # Local data for this table only
+```
+
+> The table block will use its own `block["data"]` if present, otherwise it will fall back to the global `data_rows`.
 
 ## Transforms
 

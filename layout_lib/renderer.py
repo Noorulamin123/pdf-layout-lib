@@ -14,6 +14,36 @@ def render_block(block, data_rows, group_context=None):
         # Use block['data'] if present, else fall back to data_rows
         table_data_rows = block.get("data", data_rows)
         print(f"🔍 Using table data rows: {table_data_rows}")
+        
+        # Apply negative filter if specified
+        negative_filter = block.get("negative_filter")
+        if negative_filter and table_data_rows:
+            print(f"🔍 Applying negative filters: {negative_filter}")
+            try:
+                # Handle both single filter and list of filters
+                if not isinstance(negative_filter, list):
+                    negative_filter = [negative_filter]
+                
+                # Track all objects to exclude
+                excluded_indices = set()
+                
+                for filter_condition in negative_filter:
+                    print(f"🔍 Processing negative filter: {filter_condition}")
+                    # Apply filter to find objects that match this condition
+                    filtered_data = apply_filter(table_data_rows, filter_condition)
+                    
+                    # Mark matching objects for exclusion
+                    for i, obj in enumerate(table_data_rows):
+                        if obj in filtered_data:
+                            excluded_indices.add(i)
+                            print(f"🔍 Excluding object {i}: {obj.get('RIC', 'N/A')} (matches: {filter_condition})")
+                
+                # Keep only objects that were NOT excluded by any negative filter
+                table_data_rows = [obj for i, obj in enumerate(table_data_rows) if i not in excluded_indices]
+                print(f"🔍 After negative filters: {len(table_data_rows)} objects remaining")
+            except Exception as e:
+                print(f"⚠️ Negative filter error: {e}")
+        
         block["data_rows"] = table_data_rows
         field_map = block["field_map"]
         print(f"🔍 Field map: {field_map}")

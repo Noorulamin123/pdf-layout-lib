@@ -78,6 +78,7 @@
     },
     {
       "type": "table",
+      "negative_filter": ["RIC=GOOGL.O"],
       "field_map": [
         {
           "label": "Financial Data",

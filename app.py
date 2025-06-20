@@ -3,7 +3,7 @@ from reportlab.platypus import SimpleDocTemplate
 from layout_lib.renderer import interpret_layout
 from layout_lib.table import build_table, build_data_table
 
-def interpret_dsl(layout, filename="output.pdf"):
+def generate_pdf_from_layout(layout, filename="output.pdf"):
     doc = SimpleDocTemplate(filename)
     data_rows = layout.get("data_rows", [])
     layout_tree = {
@@ -33,9 +33,9 @@ if __name__ == "__main__":
             # For simplicity, inject group_data into all groups; you can refine if needed
             block["data"] = group_data
 
-    # Inject data.json into the table block
-    for block in layout.get("children", []):
-        if block.get("type") == "table":
-            block["data"] = data
+    # The table will use negative_filter to exclude objects used by groups
+    # No need to manually filter data - the table handles it automatically
+    print(f"📊 Total objects available: {len(data)}")
+    print(f"🔍 Table will automatically exclude objects matching negative_filter")
 
-    interpret_dsl(layout, "custom_headers_table.pdf")
+    generate_pdf_from_layout(layout, "custom_headers_table.pdf")
